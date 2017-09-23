@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE log4j:configuration SYSTEM "log4j.dtd">
+
+<!-- ===================================================================== -->
+<!--                                                                       -->
+<!--  Log4j Configuration                                                  -->
+<!--                                                                       -->
+<!-- ===================================================================== -->
+
+
+<!-- $Id: log4j.xml prod, v1.0 2016-01-19 14:10:00 aarang Exp $ -->
+
+<!--
+   | For more configuration infromation and examples see the Jakarta Log4j
+   | awebsite: http://jakarta.apache.org/log4j
+   |
+   | bwiki: switched this app to xml configuration of log4j, 
+   |		as need to introduce perfomance logging for RNP & EDS in a separate file.
+   |
+   | cNote: How to use log4j in swrnp:
+   |    In order to to log into performance Logging use as follows:
+   |	First get a logger either use: 
+   |    Logger log = Logger.getLogger(Example.class) /* this gets the default logger */
+   |     or
+   |    Logger log = Logger.getLogger("rnp.perf") /* this gets the rnp-perf logger used to log timings etc*/
+   |     or
+   |    Logger log = Logger.getLogger("rnp.out") /* this will log to the console (no longer by default) */
+   |
+
+	In Order to make a default Appender, add the same to ROOT
+	e.g.:
+    <root>
+		<level value="debug" />
+		<appender-ref ref="ConsoleAppender" />
+	</root>
+   
+ -->
+
+<log4j:configuration xmlns:log4j='http://jakarta.apache.org/log4j/'>
+	<appender name="AsyncAppender" class="org.apache.log4j.AsyncAppender">
+		<param name="BufferSize" value="${async.buffer.size}" /><!-- Max number of events that can be queued; Default :: 128 messages -->
+		<param name="Blocking" value="true" /><!-- If true, the appender will wait until there are free slots in the queue; Default :: true -->
+		<appender-ref ref="PerfJdbcAppender"/>
+	</appender>
+	
+	<appender name="TestAsyncAppender" class="org.apache.log4j.AsyncAppender">
+		<param name="BufferSize" value="256" /><!-- Max number of events that can be queued; Default :: 128 messages -->
+		<param name="Blocking" value="true" /><!-- If true, the appender will wait until there are free slots in the queue; Default :: true -->
+		<appender-ref ref="TestPerfJdbcAppender"/>
+	</appender>
+	
+	<appender name="ConsoleAppender" class="org.apache.log4j.ConsoleAppender">
+		<param name="Threshold" value="info" />
+		<layout class="org.apache.log4j.PatternLayout">
+			<param name="ConversionPattern" 
+				value="${async.buffer.size} ${cisco.life} %d %-5p - %m%n"/>
+		</layout>
+	</appender>
+
+	<appender name="RNPAppender" class="org.apache.log4j.RollingFileAppender">
+		<param name="File" value="${LOG_DIR}/RNPService.log"/>
+		<param name="MaxFileSize" value="1000kb"/>
+		<param name="MaxBackupIndex" value="2" />
+		<param name="Threshold" value="debug" />
+		<layout class="org.apache.log4j.PatternLayout">
+			<param name="ConversionPattern" 
+				value="[%t] %-5p %d %x - %m%n"/>
+		</layout>
+	</appender>
+
+	<appender name="CPRAppender" class="org.apache.log4j.RollingFileAppender">
+		<param name="File" value="${LOG_DIR}/cpr.log"/>
+		<param name="MaxFileSize" value="1000kb"/>
+		<param name="MaxBackupIndex" value="2" />
+		<param name="Threshold" value="info" />
+		<layout class="org.apache.log4j.PatternLayout">
+			<param name="ConversionPattern" 
+				value="%-5p %d %x - %m%n"/>
+		</layout>
+	</appender>
+	
+	<appender name="PerfJdbcAppender" class="org.apache.log4j.jdbc.JDBCAppender">
+        <param name="URL"
+            value="jdbc:oracle:thin:@(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=lnxdb-stg-438.cisco.com)(PORT=1521))(CONNECT_DATA=(SID=SCASTG1)(Server=Dedicated)))" />
+        <param name="driver" value="oracle.jdbc.OracleDriver" />
+        <param name="user" value="SED_APPS"/>
+        <param name="password" value="We2P3x7M"/>
+		<param name="Threshold" value="info" />
+		<!-- <param name="ImmediateFlush" value="true"/> 
+	    <param name="BufferSize" value="${async.buffer.size}" /> -->
+	    <layout class="org.apache.log4j.PatternLayout">
+	        <param name="ConversionPattern"
+	               value="INSERT INTO SWC_RNPEB_ONLINE_PERF_LOG
+	               ( THREAD_ID,RNPEB_TRANS_ID,MDF_CONCEPT_ID,DECISION_TYPE,USER_ID,METHOD_NAME,EXECUTION_TIME,CREATE_DATE,START_TIME,END_TIME,EDS_TOKEN)
+			VALUES (  '%t', %X{transId}, %X{mdfId}, '%X{decisionType}', '%X{userId}', '%X{mtdName}', %X{executionTime}, TO_DATE('%X{createDate}', 'MM/dd/yyyy HH24:mi:ss'), TO_TIMESTAMP('%X{startTime}', 'MM/dd/yyyy HH24:mi:ss:FF'), TO_TIMESTAMP('%X{endTime}', 'MM/dd/yyyy HH24:mi:ss:FF'),'%X{edsToken}')" />
+        </layout>
+    </appender>
+    
+    <appender name="TestPerfJdbcAppender" class="org.apache.log4j.jdbc.JDBCAppender">
+        <param name="URL"
+				value="jdbc:oracle:thin:@(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=lnxdb-stg-438.cisco.com)(PORT=1521))(CONNECT_DATA=(SID=SCASTG1)(Server=Dedicated)))" />
+        <param name="driver" value="oracle.jdbc.OracleDriver" />
+        <param name="user" value="SED_APPS"/>
+        <param name="password" value="We2P3x7M"/>
+        <!-- <param name="ImmediateFlush" value="true"/> 
+	    <param name="BufferSize" value="100" /> -->
+			    <layout class="org.apache.log4j.PatternLayout">
+	        <param name="ConversionPattern"
+	               value="INSERT INTO TESTING_PERF_LOG
+	               ( THREAD_ID,RNPEB_TRANS_ID,MDF_CONCEPT_ID,DECISION_TYPE,USER_ID,METHOD_NAME,EXECUTION_TIME,CREATE_DATE,START_TIME,END_TIME,EDS_TOKEN)
+			VALUES (  '%t', %X{transId}, %X{mdfId}, '%X{decisionType}', '%X{userId}', '%X{mtdName}', %X{executionTime}, SYSDATE, TO_TIMESTAMP('%X{startTime}', 'MM/dd/yyyy HH24:mi:ss:FF'), TO_TIMESTAMP('%X{endTime}', 'MM/dd/yyyy HH24:mi:ss:FF'),'%X{edsToken}')" />
+        </layout>
+    </appender>
+    
+	<!-- <appender name="PerfJdbcAppenderFile" class="org.apache.log4j.RollingFileAppender">
+		<param name="File" value="${LOG_DIR}/rnp-perf.log"/> 
+		<param name="ImmediateFlush" value="true"/> 
+		<param name="MaxFileSize" value="1000kb"/>
+		<param name="MaxBackupIndex" value="2" />
+		<param name="Threshold" value="info" />
+		<layout class="org.apache.log4j.PatternLayout">
+			<param name="ConversionPattern" 
+				value="%t ${async.buffer.size} ${cisco.life} %X{transId} %X{mdfId} %X{decisionType} %X{userId} %X{mtdName} %X{executionTime} %X{createDate} %X{startTime} %X{endTime} %n"/>
+		</layout>
+	</appender> -->
+	<category name="com.cisco.swc.applications.rnp">
+		<priority value="debug" />
+		<appender-ref ref="RNPAppender" />
+	</category>
+	<category name="rnp_eds.perf">
+		<priority value="info" />
+		<appender-ref ref="AsyncAppender" />
+	</category>
+	<category name="local_test.perf">
+		<priority value="info" />
+		<appender-ref ref="TestAsyncAppender" />
+	</category>
+	<category name="com.cisco.framework.cpr">
+		<priority value="info" />
+		<appender-ref ref="CPRAppender" />
+	</category>
+	
+	<root>
+		<level value="debug" />
+		<appender-ref ref="ConsoleAppender" />
+	</root>
+
+</log4j:configuration>
